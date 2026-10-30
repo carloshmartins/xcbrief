@@ -85,6 +85,13 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(out.contains("errors: 5"), "summary keeps the real total")
     }
 
+    func testGitHubEscapesPropertiesAndData() {
+        let parser = XcodebuildParser()
+        parser.consume("/a/My,Dir:1/F.swift:3:1: error: 100% broken")
+        let out = Renderer.render(parser.finish(), options: .init(format: .github))
+        XCTAssertTrue(out.contains("::error file=/a/My%2CDir%3A1/F.swift,line=3,col=1::100%25 broken"))
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))

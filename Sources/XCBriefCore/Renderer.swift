@@ -152,17 +152,23 @@ public enum Renderer {
     // MARK: - GitHub Actions
 
     private static func github(_ r: Report, options: RenderOptions) -> String {
+        // Workflow command escaping: data and property values differ (properties also escape ':' and ',').
         func escape(_ s: String) -> String {
             s.replacingOccurrences(of: "%", with: "%25")
                 .replacingOccurrences(of: "\r", with: "%0D")
                 .replacingOccurrences(of: "\n", with: "%0A")
         }
+        func escapeProperty(_ s: String) -> String {
+            escape(s)
+                .replacingOccurrences(of: ":", with: "%3A")
+                .replacingOccurrences(of: ",", with: "%2C")
+        }
         func command(_ kind: String, file: String?, line: Int?, col: Int?, title: String? = nil, _ message: String) -> String {
             var props: [String] = []
-            if let file { props.append("file=\(file)") }
+            if let file { props.append("file=\(escapeProperty(file))") }
             if let line { props.append("line=\(line)") }
             if let col { props.append("col=\(col)") }
-            if let title { props.append("title=\(title.replacingOccurrences(of: ",", with: " "))") }
+            if let title { props.append("title=\(escapeProperty(title))") }
             let p = props.isEmpty ? "" : " " + props.joined(separator: ",")
             return "::\(kind)\(p)::\(escape(message))"
         }
