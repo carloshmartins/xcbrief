@@ -50,6 +50,9 @@ public struct TestFailure: Hashable, Encodable {
 }
 
 public struct Report: Encodable {
+    /// Bumped when the JSON shape changes in a way scripts could notice.
+    public static let jsonSchemaVersion = 1
+
     /// e.g. "BUILD", "TEST", "ARCHIVE" — taken from the `** X SUCCEEDED **` line.
     public var action: String?
     /// "SUCCEEDED", "FAILED", "INTERRUPTED" or nil if xcodebuild never printed a summary line.
@@ -79,13 +82,14 @@ public struct Report: Encodable {
 
     // Compact JSON: skip empty collections and zero counts so agents read fewer tokens.
     enum CodingKeys: String, CodingKey {
-        case status, errors, warnings, testFailures, tests, failedCommands, tail, exitCode
+        case schemaVersion, status, errors, warnings, testFailures, tests, failedCommands, tail, exitCode
     }
 
     struct TestCounts: Encodable { var passed: Int; var failed: Int; var skipped: Int }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(Self.jsonSchemaVersion, forKey: .schemaVersion)
         try c.encode(statusLine, forKey: .status)
         if !errors.isEmpty { try c.encode(errors, forKey: .errors) }
         if !warnings.isEmpty { try c.encode(warnings, forKey: .warnings) }

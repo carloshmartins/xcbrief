@@ -166,7 +166,7 @@ final class ParserTests: XCTestCase {
         let parser = XcodebuildParser()
         parser.consume("** BUILD SUCCEEDED **")
         let json = Renderer.render(parser.finish(), options: .init(format: .json))
-        XCTAssertEqual(json, #"{"status":"BUILD SUCCEEDED"}"#)
+        XCTAssertEqual(json, #"{"schemaVersion":1,"status":"BUILD SUCCEEDED"}"#)
     }
 
     func testTestNameNormalization() {
