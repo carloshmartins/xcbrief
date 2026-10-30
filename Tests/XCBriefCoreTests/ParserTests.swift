@@ -40,6 +40,18 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(r.testFailures[1].message, "Expectation failed: (level → 3) == 4")
     }
 
+    func testSwiftTestingIssuesAndCounts() throws {
+        let r = try parse("swift_testing_failed")
+        XCTAssertEqual(r.statusLine, "TEST FAILED")
+        XCTAssertEqual(r.testFailures.count, 1)
+        XCTAssertEqual(r.testFailures[0].test, "addition()")
+        XCTAssertEqual(r.testFailures[0].location, "MathTests.swift:8")
+        XCTAssertEqual(r.testFailures[0].message, "Expectation failed: (1 + 1) == 3")
+        XCTAssertEqual(r.testsPassed, 1)
+        XCTAssertEqual(r.testsFailed, 1)
+        XCTAssertEqual(r.testsSkipped, 1)
+    }
+
     func testUnexplainedFailureFallsBackToTail() throws {
         let r = try parse("script_failed")
         XCTAssertTrue(r.errors.isEmpty)
