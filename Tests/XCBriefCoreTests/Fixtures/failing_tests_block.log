@@ -1,0 +1,8 @@
+Test Suite 'All tests' failed at 2026-10-30 12:00:00.000.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 0.010 (0.012) seconds
+Failing tests:
+	WorkoutTests.PowerZoneTests/testZone5()
+	Test addition() recorded an issue at MathTests.swift:8:3: Expectation failed: (1 + 1) == 3
+Testing failed:
+	Testing cancelled because the build failed.
+** TEST FAILED **

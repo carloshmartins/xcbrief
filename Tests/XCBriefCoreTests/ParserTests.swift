@@ -52,6 +52,19 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(r.testsSkipped, 1)
     }
 
+    func testFailingTestsSummaryBlockIsNotDoubleCounted() throws {
+        // End-of-run "Failing tests:" / "Testing failed:" blocks repeat info already reported above.
+        let parser = XcodebuildParser()
+        for fixture in ["swift_testing_failed", "failing_tests_block"] {
+            let url = try XCTUnwrap(Bundle.module.url(forResource: fixture, withExtension: "log", subdirectory: "Fixtures"))
+            try String(contentsOf: url, encoding: .utf8).split(separator: "\n").forEach { parser.consume(String($0)) }
+        }
+        let r = parser.finish()
+        XCTAssertEqual(r.testFailures.count, 1)
+        XCTAssertEqual(r.testsFailed, 1)
+        XCTAssertTrue(r.errors.isEmpty)
+    }
+
     func testUnexplainedFailureFallsBackToTail() throws {
         let r = try parse("script_failed")
         XCTAssertTrue(r.errors.isEmpty)
