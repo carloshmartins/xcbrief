@@ -109,6 +109,18 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(out.hasSuffix("tests: 3 passed, 2 failed, 1 skipped"))
     }
 
+    func testRootStripsPrivateSymlinkSpelling() {
+        let parser = XcodebuildParser(options: .init(root: "/var/folders/x/App"))
+        parser.consume("/private/var/folders/x/App/F.swift:1:1: error: a")
+        parser.consume("/var/folders/x/App/G.swift:2:1: error: b")
+        let r = parser.finish()
+        XCTAssertEqual(r.errors.map(\.file), ["F.swift", "G.swift"])
+
+        let reversed = XcodebuildParser(options: .init(root: "/private/tmp/App"))
+        reversed.consume("/tmp/App/H.swift:3:1: error: c")
+        XCTAssertEqual(reversed.finish().errors.first?.file, "H.swift")
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))

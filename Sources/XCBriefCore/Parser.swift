@@ -15,6 +15,7 @@ public final class XcodebuildParser {
     }
 
     private let options: Options
+    private let rootPrefixes: [String]
     private var report = Report()
 
     // De-duplication: xcodebuild repeats the same diagnostic per target/arch/retry.
@@ -29,6 +30,7 @@ public final class XcodebuildParser {
 
     public init(options: Options = Options()) {
         self.options = options
+        self.rootPrefixes = Self.prefixes(for: options.root)
     }
 
     // MARK: - Patterns
@@ -190,9 +192,19 @@ public final class XcodebuildParser {
     }
 
     private func shorten(_ path: String) -> String {
-        guard let root = options.root, !root.isEmpty else { return path }
-        let prefix = root.hasSuffix("/") ? root : root + "/"
-        return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
+        for prefix in rootPrefixes where path.hasPrefix(prefix) {
+            return String(path.dropFirst(prefix.count))
+        }
+        return path
+    }
+
+    /// The root with a trailing slash, plus its /private twin: macOS temp dirs are symlinks
+    /// (/var -> /private/var, /tmp -> /private/tmp) and tools report either spelling.
+    private static func prefixes(for root: String?) -> [String] {
+        guard let root, !root.isEmpty else { return [] }
+        let base = root.hasSuffix("/") ? root : root + "/"
+        if base.hasPrefix("/private/") { return [base, String(base.dropFirst("/private".count))] }
+        return [base, "/private" + base]
     }
 
     /// "-[FooTests testBar]" -> "FooTests.testBar", "FooTests.testBar()" -> "FooTests.testBar"
