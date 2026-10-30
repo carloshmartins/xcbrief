@@ -21,6 +21,7 @@ final class CLITests: XCTestCase {
     }
 
     func testFlagsAndValues() throws {
+        XCTAssertEqual(try options(["--junit=/tmp/j.xml"]).junitPath, "/tmp/j.xml")
         XCTAssertTrue(try options(["--notes"]).render.includeNotes)
         XCTAssertTrue(try options(["-q"]).render.quiet)
         XCTAssertTrue(try options(["--quiet"]).render.quiet)

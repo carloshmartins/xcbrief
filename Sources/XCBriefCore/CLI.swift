@@ -3,6 +3,7 @@ import Foundation
 public struct CLIOptions {
     public var render = RenderOptions()
     public var teePath: String?
+    public var junitPath: String?
     public var root: String?
     /// Command to run and wrap (everything after `--`); empty means read the log from stdin.
     public var command: [String] = []
@@ -36,6 +37,7 @@ public enum CLI {
       -q, --quiet      Text only: header, errors and test failures (no warnings summary)
       --max <n>        Max items per list (default: 30)
       --tee <file>     Also write the full raw log to <file>
+      --junit <file>   Also write JUnit XML (failures only) to <file>
       --root <path>    Path prefix to strip from file paths (default: current directory)
       --version        Print the version
       -h, --help       Show this help
@@ -47,7 +49,7 @@ public enum CLI {
       exit code when it failed without anything parseable.
     """
 
-    private static let valueOptions: Set<String> = ["--max", "--tee", "--root"]
+    private static let valueOptions: Set<String> = ["--max", "--tee", "--junit", "--root"]
 
     /// Parses command-line arguments (without the program name).
     public static func parse(_ arguments: [String], defaultRoot: String? = nil) throws -> CLIAction {
@@ -77,6 +79,10 @@ public enum CLI {
             case "--tee":
                 guard let v = args.first else { throw CLIError(message: "--tee needs a file path") }
                 options.teePath = v
+                args.removeFirst()
+            case "--junit":
+                guard let v = args.first else { throw CLIError(message: "--junit needs a file path") }
+                options.junitPath = v
                 args.removeFirst()
             case "--root":
                 guard let v = args.first else { throw CLIError(message: "--root needs a path") }

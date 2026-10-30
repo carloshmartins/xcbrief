@@ -60,6 +60,7 @@ xcbrief --tee /tmp/xcodebuild.log -- xcodebuild test -scheme App
 | `-q`, `--quiet` | Text only: header, errors and test failures (no warnings summary or failed commands) |
 | `--warnings` | List warnings with locations (default: counts per message) |
 | `--max <n>` | Max items per list (default 30) |
+| `--junit <file>` | Also write JUnit XML (test failures and build errors; passing tests are only counted) |
 | `--tee <file>` | Also write the full raw log |
 | `--root <path>` | Prefix stripped from paths (default: current directory) |
 | `--version` | Print the version |

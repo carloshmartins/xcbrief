@@ -189,6 +189,18 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(Renderer.render(r, options: .init(format: .json, includeNotes: true)).contains("\"notes\":["))
     }
 
+    func testJUnitOutput() throws {
+        let xml = Renderer.junit(try parse("test_failed"))
+        XCTAssertTrue(xml.contains(#"<testsuite name="tests" tests="6" failures="2" skipped="1">"#))
+        XCTAssertTrue(xml.contains(#"<testcase classname="WorkoutTests.PowerZoneTests" name="testZone5">"#))
+        XCTAssertTrue(xml.contains(#"message="XCTAssertEqual failed: (&quot;4&quot;) is not equal to (&quot;5&quot;)""#))
+        XCTAssertFalse(xml.contains(#"name="build""#), "no build suite without errors")
+
+        let build = Renderer.junit(try parse("build_failed"))
+        XCTAssertTrue(build.contains(#"<testsuite name="build" tests="3" errors="3">"#))
+        XCTAssertTrue(build.contains("cannot find 'trainerr' in scope"), "apostrophes are valid inside double-quoted attributes")
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))

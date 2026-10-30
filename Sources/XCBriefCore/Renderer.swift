@@ -163,6 +163,42 @@ public enum Renderer {
         return String(decoding: data, as: UTF8.self)
     }
 
+    // MARK: - JUnit
+
+    /// JUnit XML for CI test reporters. Only failures are listed as test cases (the parser keeps
+    /// counts, not the names of passing tests); build errors go in a separate "build" suite.
+    public static func junit(_ r: Report) -> String {
+        func esc(_ s: String) -> String {
+            s.replacingOccurrences(of: "&", with: "&amp;")
+                .replacingOccurrences(of: "<", with: "&lt;")
+                .replacingOccurrences(of: ">", with: "&gt;")
+                .replacingOccurrences(of: "\"", with: "&quot;")
+        }
+        var out = ["<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "<testsuites>"]
+        let total = r.testsPassed + r.testsFailed + r.testsSkipped
+        out.append("  <testsuite name=\"tests\" tests=\"\(total)\" failures=\"\(r.testsFailed)\" skipped=\"\(r.testsSkipped)\">")
+        for f in r.testFailures {
+            let parts = f.test.split(separator: ".")
+            let name = parts.last.map(String.init) ?? f.test
+            let cls = parts.dropLast().joined(separator: ".")
+            out.append("    <testcase classname=\"\(esc(cls))\" name=\"\(esc(name))\">")
+            out.append("      <failure message=\"\(esc(f.message))\">\(esc(f.location ?? ""))</failure>")
+            out.append("    </testcase>")
+        }
+        out.append("  </testsuite>")
+        if !r.errors.isEmpty {
+            out.append("  <testsuite name=\"build\" tests=\"\(r.errors.count)\" errors=\"\(r.errors.count)\">")
+            for e in r.errors {
+                out.append("    <testcase classname=\"build\" name=\"\(esc(e.location ?? "build"))\">")
+                out.append("      <error message=\"\(esc(e.message))\"/>")
+                out.append("    </testcase>")
+            }
+            out.append("  </testsuite>")
+        }
+        out.append("</testsuites>")
+        return out.joined(separator: "\n")
+    }
+
     // MARK: - GitHub Actions
 
     private static func github(_ r: Report, options: RenderOptions) -> String {

@@ -113,6 +113,14 @@ try? tee?.close()
 let report = parser.finish(exitCode: exitCode)
 print(Renderer.render(report, options: renderOptions))
 
+if let junitPath = cli.junitPath {
+    do {
+        try Renderer.junit(report).write(toFile: junitPath, atomically: true, encoding: .utf8)
+    } catch {
+        FileHandle.standardError.write(Data("xcbrief: cannot write \(junitPath): \(error.localizedDescription)\n".utf8))
+    }
+}
+
 if let code = exitCode, code != 0 {
     exit(code)
 }

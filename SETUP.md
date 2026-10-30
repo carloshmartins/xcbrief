@@ -108,6 +108,7 @@ With fastlane `scan`/`gym`, set `buildlog_path` and feed the raw log (not the xc
 | `--max <n>` | Items per list (default 30) |
 | `--json` | Compact JSON for scripts |
 | `--github` | GitHub Actions annotations for CI |
+| `--junit <file>` | Also write JUnit XML (test failures and build errors; passing tests are only counted) |
 | `--tee <file>` | Also save the raw log |
 | `--root <path>` | Prefix stripped from paths (default: current directory) |
 | `--version` | Print the version |
