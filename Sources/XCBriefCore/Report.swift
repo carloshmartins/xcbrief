@@ -8,6 +8,8 @@ public struct Diagnostic: Hashable, Encodable {
     public var line: Int?
     public var column: Int?
     public var message: String
+    /// Compiler `note:` lines that followed an error ("message (file:line)"), shown with --notes.
+    public var notes: [String] = []
 
     /// "path:line:col" or nil when the diagnostic has no location (linker, xcodebuild).
     public var location: String? {
@@ -19,12 +21,13 @@ public struct Diagnostic: Hashable, Encodable {
     }
 
     // Severity is implied by which array it's in; location is collapsed to one string.
-    enum CodingKeys: String, CodingKey { case location, message }
+    enum CodingKeys: String, CodingKey { case location, message, notes }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encodeIfPresent(location, forKey: .location)
         try c.encode(message, forKey: .message)
+        if !notes.isEmpty { try c.encode(notes, forKey: .notes) }
     }
 }
 

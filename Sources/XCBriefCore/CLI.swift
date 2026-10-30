@@ -32,6 +32,7 @@ public enum CLI {
       --json           Print compact JSON instead of text (for scripts)
       --github         Print GitHub Actions annotations (for CI)
       --warnings       List warnings with locations (default: counts per message)
+      --notes          Show compiler notes attached to errors (default: omitted)
       -q, --quiet      Text only: header, errors and test failures (no warnings summary)
       --max <n>        Max items per list (default: 30)
       --tee <file>     Also write the full raw log to <file>
@@ -65,6 +66,7 @@ public enum CLI {
             case "--json": options.render.format = .json
             case "--github": options.render.format = .github
             case "--warnings": options.render.includeWarnings = true
+            case "--notes": options.render.includeNotes = true
             case "-q", "--quiet": options.render.quiet = true
             case "--max":
                 guard let v = args.first, let n = Int(v), n > 0 else {

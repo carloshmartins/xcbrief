@@ -168,6 +168,27 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(build.contains("cannot find 'trainerr' in scope"))
     }
 
+    func testNotesAttachToPrecedingErrorAndAreOptIn() {
+        let parser = XcodebuildParser(options: .init(root: "/a"))
+        parser.consume("/a/F.swift:3:9: error: no exact matches in call to initializer")
+        parser.consume("/a/F.swift:3:9: note: candidate expects value of type 'Int' for parameter #1")
+        parser.consume("/a/F.swift:3:9: error: no exact matches in call to initializer") // duplicate (other arch)
+        parser.consume("/a/F.swift:3:9: note: candidate expects value of type 'Int' for parameter #1")
+        parser.consume("note: Building targets in dependency order") // no location: ignored
+        parser.consume("/a/G.swift:1:1: warning: unused")
+        parser.consume("/a/G.swift:1:1: note: not an error note")
+        let r = parser.finish()
+        XCTAssertEqual(r.errors.count, 1)
+        XCTAssertEqual(r.errors[0].notes, ["candidate expects value of type 'Int' for parameter #1 (F.swift:3)"])
+
+        let plain = Renderer.render(r, options: .init())
+        XCTAssertFalse(plain.contains("note:"))
+        let withNotes = Renderer.render(r, options: .init(includeNotes: true))
+        XCTAssertTrue(withNotes.contains("  3:9 error: no exact matches in call to initializer\n      note: candidate expects"))
+        XCTAssertFalse(Renderer.render(r, options: .init(format: .json)).contains("notes"))
+        XCTAssertTrue(Renderer.render(r, options: .init(format: .json, includeNotes: true)).contains("\"notes\":["))
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))

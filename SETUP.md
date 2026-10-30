@@ -102,6 +102,7 @@ With fastlane `scan`/`gym`, set `buildlog_path` and feed the raw log (not the xc
 | Option | Use |
 |---|---|
 | *(none)* | Text summary, the default for agents and humans |
+| `--notes` | Show compiler `note:` lines under each error (default: omitted, they cost tokens) |
 | `-q`, `--quiet` | Text only: header, errors and test failures (no warnings summary or failed commands) |
 | `--warnings` | List warnings with file and line (default: counts per message) |
 | `--max <n>` | Items per list (default 30) |

@@ -56,6 +56,7 @@ xcbrief --tee /tmp/xcodebuild.log -- xcodebuild test -scheme App
 |---|---|
 | `--json` | Compact JSON (empty fields omitted), for scripts |
 | `--github` | GitHub Actions annotations, for CI |
+| `--notes` | Show compiler `note:` lines under each error (default: omitted, they cost tokens) |
 | `-q`, `--quiet` | Text only: header, errors and test failures (no warnings summary or failed commands) |
 | `--warnings` | List warnings with locations (default: counts per message) |
 | `--max <n>` | Max items per list (default 30) |

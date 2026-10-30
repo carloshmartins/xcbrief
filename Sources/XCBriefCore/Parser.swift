@@ -25,6 +25,10 @@ public final class XcodebuildParser {
     // Last status per test wins, so retries and repeated lines don't inflate counts.
     private var testStatus: [String: String] = [:]
 
+    // Index in report.errors of the latest newly-added error, so following `note:` lines attach to it.
+    private var lastErrorIndex: Int?
+    private static let maxNotesPerError = 3
+
     private var inFailedCommands = false
     // A global error ending in ":" (e.g. package resolution) is followed by indented detail lines.
     private var continuationIndex: Int?
@@ -60,6 +64,9 @@ public final class XcodebuildParser {
 
     // /path/File.swift:12:5: error: cannot find 'x' in scope
     private static let compilerDiagnostic = Pattern(#"^(.+?):(\d+):(\d+): (error|warning|fatal error): (.*)$"#)
+
+    // /path/File.swift:12:5: note: did you mean 'trainer'?
+    private static let note = Pattern(#"^(.+?):(\d+):(\d+): note: (.*)$"#)
 
     // error: ..., ld: warning: ..., clang: error: ..., xcodebuild: error: ...
     private static let globalDiagnostic = Pattern(#"^(?:[\w.-]+: )?(error|warning|fatal error): (.*)$"#)
@@ -153,6 +160,13 @@ public final class XcodebuildParser {
             return
         }
 
+        if let m = Self.note.match(line) {
+            if let i = lastErrorIndex, report.errors[i].notes.count < Self.maxNotesPerError {
+                report.errors[i].notes.append("\(m[3]!) (\(shorten(m[0]!)):\(m[1]!))")
+            }
+            return
+        }
+
         if let m = Self.compilerDiagnostic.match(line) {
             addDiagnostic(Diagnostic(
                 severity: m[3] == "warning" ? .warning : .error,
@@ -214,9 +228,13 @@ public final class XcodebuildParser {
 
     private func addDiagnostic(_ d: Diagnostic) {
         let key = "\(d.location ?? ""): \(d.message)"
+        lastErrorIndex = nil
         switch d.severity {
         case .error:
-            if seenErrors.insert(key).inserted { report.errors.append(d) }
+            if seenErrors.insert(key).inserted {
+                report.errors.append(d)
+                lastErrorIndex = report.errors.count - 1
+            }
         case .warning:
             if seenWarnings.insert(key).inserted { report.warnings.append(d) }
         }
