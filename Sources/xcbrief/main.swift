@@ -64,6 +64,16 @@ if command.isEmpty {
         fail("could not run \(command.joined(separator: " ")): \(error.localizedDescription)")
     }
 
+    // Ctrl-C reaches the child through the terminal's process group, so ignore SIGINT here and keep
+    // reading until the child exits (we still print the summary). SIGTERM is sent to us alone, so forward it.
+    signal(SIGINT, SIG_IGN)
+    signal(SIGTERM, SIG_IGN)
+    let termSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: DispatchQueue(label: "xcbrief.signals"))
+    termSource.setEventHandler {
+        if process.isRunning { kill(process.processIdentifier, SIGTERM) }
+    }
+    termSource.resume()
+
     let reader = pipe.fileHandleForReading
     var buffer = Data()
     while true {
@@ -77,7 +87,10 @@ if command.isEmpty {
     }
     if !buffer.isEmpty { handle(String(decoding: buffer, as: UTF8.self)) }
     process.waitUntilExit()
-    exitCode = process.terminationStatus
+    // A signal-killed child reports the bare signal number; use the shell convention 128 + n.
+    exitCode = process.terminationReason == .uncaughtSignal
+        ? 128 + process.terminationStatus
+        : process.terminationStatus
 }
 
 try? tee?.close()
