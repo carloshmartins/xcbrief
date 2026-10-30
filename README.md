@@ -92,3 +92,7 @@ Always run xcodebuild through xcbrief, never raw:
   xcbrief --tee /tmp/xcodebuild.log -- xcodebuild <args>
 Only read /tmp/xcodebuild.log if the summary isn't enough to fix the problem.
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
