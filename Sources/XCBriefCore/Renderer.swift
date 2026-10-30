@@ -28,7 +28,7 @@ public enum Renderer {
         switch options.format {
         case .text: return text(report, options: options)
         case .json: return json(report, options: options)
-        case .github: return github(report)
+        case .github: return github(report, options: options)
         }
     }
 
@@ -151,7 +151,7 @@ public enum Renderer {
 
     // MARK: - GitHub Actions
 
-    private static func github(_ r: Report) -> String {
+    private static func github(_ r: Report, options: RenderOptions) -> String {
         func escape(_ s: String) -> String {
             s.replacingOccurrences(of: "%", with: "%25")
                 .replacingOccurrences(of: "\r", with: "%0D")
@@ -167,9 +167,9 @@ public enum Renderer {
             return "::\(kind)\(p)::\(escape(message))"
         }
         var out: [String] = []
-        out += r.errors.map { command("error", file: $0.file, line: $0.line, col: $0.column, $0.message) }
-        out += r.testFailures.map { command("error", file: $0.file, line: $0.line, col: nil, title: $0.test, $0.message) }
-        out += r.warnings.map { command("warning", file: $0.file, line: $0.line, col: $0.column, $0.message) }
+        out += r.errors.prefix(options.maxItems).map { command("error", file: $0.file, line: $0.line, col: $0.column, $0.message) }
+        out += r.testFailures.prefix(options.maxItems).map { command("error", file: $0.file, line: $0.line, col: nil, title: $0.test, $0.message) }
+        out += r.warnings.prefix(options.maxItems).map { command("warning", file: $0.file, line: $0.line, col: $0.column, $0.message) }
         out.append(r.statusLine + " | errors: \(r.errors.count) | warnings: \(r.warnings.count)"
                    + (r.testsFailed + r.testsPassed > 0 ? " | tests: \(r.testsPassed) passed, \(r.testsFailed) failed" : ""))
         return out.joined(separator: "\n")

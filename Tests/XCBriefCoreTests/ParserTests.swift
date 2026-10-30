@@ -77,6 +77,14 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(out.contains("::error file=Sources/Workout/WorkoutView.swift,line=12,col=5::cannot find 'trainerr' in scope"))
     }
 
+    func testGitHubAnnotationsRespectMax() {
+        let parser = XcodebuildParser()
+        for i in 1...5 { parser.consume("/a/F.swift:\(i):1: error: boom \(i)") }
+        let out = Renderer.render(parser.finish(), options: .init(format: .github, maxItems: 2))
+        XCTAssertEqual(out.split(separator: "\n").filter { $0.hasPrefix("::error") }.count, 2)
+        XCTAssertTrue(out.contains("errors: 5"), "summary keeps the real total")
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))
