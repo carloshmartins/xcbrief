@@ -55,6 +55,9 @@ public final class XcodebuildParser {
     // ✔ Test run with 12 tests in 3 suites passed after 0.02 seconds.  (summary, ignored)
     private static let swiftTestingRun = Pattern(#"(?:^|\s)Test run with \d+ tests?"#)
 
+    // Restarting after unexpected exit, crash, or test timeout in PowerZoneTests/testZone5(); summary will ...
+    private static let crashRestart = Pattern(#"^Restarting after unexpected exit, crash, or test timeout in (.+?);"#)
+
     // /path/File.swift:12:5: error: cannot find 'x' in scope
     private static let compilerDiagnostic = Pattern(#"^(.+?):(\d+):(\d+): (error|warning|fatal error): (.*)$"#)
 
@@ -105,12 +108,26 @@ public final class XcodebuildParser {
         }
 
         if let m = Self.xctestFailure.match(line) {
+            // Crashes and timeouts have no source location: Xcode reports "<unknown>:0".
+            let located = m[0] != "<unknown>"
+            let name = Self.normalizeTestName(m[2]!)
+            // A crashed test never prints "failed", so count it here.
+            if !located { testStatus[name] = "failed" }
             addFailure(TestFailure(
-                test: Self.normalizeTestName(m[2]!),
-                file: shorten(m[0]!),
-                line: Int(m[1]!),
+                test: name,
+                file: located ? shorten(m[0]!) : nil,
+                line: located ? Int(m[1]!) : nil,
                 message: m[3]!
             ))
+            return
+        }
+
+        if let m = Self.crashRestart.match(line) {
+            let test = Self.normalizeTestName(m[0]!.replacingOccurrences(of: "/", with: "."))
+            // Usually preceded by the crash error for the same test (which has the module name).
+            if report.testFailures.contains(where: { $0.test == test || $0.test.hasSuffix("." + test) }) { return }
+            addFailure(TestFailure(test: test, file: nil, line: nil,
+                                   message: "test runner crashed or timed out and was restarted"))
             return
         }
 

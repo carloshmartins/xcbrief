@@ -1,0 +1,10 @@
+Test Suite 'PowerZoneTests' started at 2026-10-30 12:00:00.000.
+Test Case '-[WorkoutTests.PowerZoneTests testZone1]' started.
+Test Case '-[WorkoutTests.PowerZoneTests testZone1]' passed (0.001 seconds).
+Test Case '-[WorkoutTests.PowerZoneTests testZone5]' started.
+<unknown>:0: error: -[WorkoutTests.PowerZoneTests testZone5] : Crash: xctest (4321) (signal: Trace/BPT trap: 5)
+Restarting after unexpected exit, crash, or test timeout in PowerZoneTests/testZone5(); summary will include totals from previous launches.
+Test Case '-[WorkoutTests.PowerZoneTests testZone6]' started.
+Test Case '-[WorkoutTests.PowerZoneTests testZone6]' passed (0.002 seconds).
+error: Signing for "App" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'App' from project 'App')
+** TEST FAILED **

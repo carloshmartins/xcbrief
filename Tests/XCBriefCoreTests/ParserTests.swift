@@ -75,6 +75,19 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(r.tail.isEmpty)
     }
 
+    func testCrashAndSigningErrors() throws {
+        let r = try parse("test_crashed")
+        // The crash error and the runner-restart line describe one failure: reported once.
+        XCTAssertEqual(r.testFailures.count, 1)
+        let crashed = r.testFailures
+        XCTAssertNil(crashed[0].location, "<unknown>:0 is not a real location")
+        XCTAssertTrue(crashed[0].message.hasPrefix("Crash: xctest"))
+        XCTAssertEqual(r.errors.count, 1)
+        XCTAssertTrue(r.errors[0].message.hasPrefix("Signing for \"App\" requires a development team"))
+        XCTAssertEqual(r.testsPassed, 2)
+        XCTAssertEqual(r.testsFailed, 1, "crashed test counts as failed")
+    }
+
     func testUnexplainedFailureFallsBackToTail() throws {
         let r = try parse("script_failed")
         XCTAssertTrue(r.errors.isEmpty)
