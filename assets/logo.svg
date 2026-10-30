@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120" role="img" aria-labelledby="t">
+  <title id="t">xcbrief</title>
+  <!-- noise: the long build log -->
+  <g stroke="#6e7681" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round">
+    <line x1="10" y1="20"  x2="40" y2="20"/>
+    <line x1="10" y1="32"  x2="52" y2="32"/>
+    <line x1="10" y1="44"  x2="34" y2="44"/>
+    <line x1="10" y1="56"  x2="48" y2="56"/>
+    <line x1="10" y1="68"  x2="56" y2="68"/>
+    <line x1="10" y1="80"  x2="38" y2="80"/>
+    <line x1="10" y1="92"  x2="50" y2="92"/>
+    <line x1="10" y1="104" x2="30" y2="104"/>
+  </g>
+  <!-- chevron: the filter -->
+  <polyline points="64,46 76,60 64,74" fill="none" stroke="#6e7681" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- signal: what is left -->
+  <g stroke-width="7" stroke-linecap="round">
+    <line x1="90" y1="42" x2="112" y2="42" stroke="#F05138"/>
+    <line x1="90" y1="60" x2="106" y2="60" stroke="#6e7681"/>
+    <line x1="90" y1="78" x2="110" y2="78" stroke="#6e7681"/>
+  </g>
+  <text x="140" y="78" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="52" font-weight="700" fill="#6e7681" letter-spacing="-1">xcbrief</text>
+</svg>
