@@ -40,8 +40,20 @@ if let teePath {
     if tee == nil { fail("cannot write to \(teePath)") }
 }
 
+// Buffer tee writes: one syscall per line is wasteful on 100k-line logs.
+var teeBuffer = Data()
+
+func flushTee() {
+    guard !teeBuffer.isEmpty else { return }
+    tee?.write(teeBuffer)
+    teeBuffer.removeAll(keepingCapacity: true)
+}
+
 func handle(_ line: String) {
-    tee?.write(Data((line + "\n").utf8))
+    if tee != nil {
+        teeBuffer.append(Data((line + "\n").utf8))
+        if teeBuffer.count >= 64 * 1024 { flushTee() }
+    }
     parser.consume(line)
 }
 
@@ -93,6 +105,7 @@ if command.isEmpty {
         : process.terminationStatus
 }
 
+flushTee()
 try? tee?.close()
 
 // MARK: - Output
