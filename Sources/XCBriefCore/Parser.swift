@@ -1,0 +1,228 @@
+import Foundation
+
+/// Streaming parser: feed it xcodebuild output one line at a time, then call `finish()`.
+public final class XcodebuildParser {
+    public struct Options {
+        /// Absolute path prefix stripped from file paths (usually the current directory).
+        public var root: String?
+        /// How many raw lines to keep as a fallback when a failure can't be explained.
+        public var tailSize = 25
+
+        public init(root: String? = nil, tailSize: Int = 25) {
+            self.root = root
+            self.tailSize = tailSize
+        }
+    }
+
+    private let options: Options
+    private var report = Report()
+
+    // De-duplication: xcodebuild repeats the same diagnostic per target/arch/retry.
+    private var seenErrors = Set<String>()
+    private var seenWarnings = Set<String>()
+    private var seenFailures = Set<String>()
+    // Last status per test wins, so retries and repeated lines don't inflate counts.
+    private var testStatus: [String: String] = [:]
+
+    private var inFailedCommands = false
+    private var tail: [String] = []
+
+    public init(options: Options = Options()) {
+        self.options = options
+    }
+
+    // MARK: - Patterns
+
+    // /path/FooTests.swift:33: error: -[FooTests testBar] : XCTAssertEqual failed ...
+    // /path/FooTests.swift:33: error: FooTests.testBar() : failed - ...
+    private static let xctestFailure = Pattern(#"^(.+?):(\d+): error: (-\[\S+ \S+\]|\S+\(\)) : (.*)$"#)
+
+    // Test Case '-[FooTests testBar]' passed (0.001 seconds).
+    // Test case 'FooTests.testBar()' failed on 'Clone 1 of iPhone 16' (0.003 seconds)
+    private static let xctestCase = Pattern(#"^Test [Cc]ase '(.+?)' (passed|failed|skipped)"#)
+
+    // Swift Testing (prefixed by an SF Symbol or ✔/✘ glyph):
+    // ✘ Test addition() recorded an issue at MathTests.swift:8:3: Expectation failed: 1 == 2
+    private static let swiftTestingIssue = Pattern(#"(?:^|\s)Test (.+?) recorded an issue at (.+?):(\d+):(\d+): (.*)$"#)
+    // ✔ Test addition() passed after 0.001 seconds.
+    private static let swiftTestingResult = Pattern(#"(?:^|\s)Test (.+?) (passed|failed|skipped)(?: after|\.|:|$)"#)
+    // ✔ Test run with 12 tests in 3 suites passed after 0.02 seconds.  (summary, ignored)
+    private static let swiftTestingRun = Pattern(#"(?:^|\s)Test run with \d+ tests?"#)
+
+    // /path/File.swift:12:5: error: cannot find 'x' in scope
+    private static let compilerDiagnostic = Pattern(#"^(.+?):(\d+):(\d+): (error|warning|fatal error): (.*)$"#)
+
+    // error: ..., ld: warning: ..., clang: error: ..., xcodebuild: error: ...
+    private static let globalDiagnostic = Pattern(#"^(?:[\w.-]+: )?(error|warning|fatal error): (.*)$"#)
+
+    //   "_OBJC_CLASS_$_Foo", referenced from:
+    private static let undefinedSymbol = Pattern(#"^\s+"(.+)", referenced from:"#)
+
+    // ** BUILD FAILED **  /  ** TEST SUCCEEDED **
+    private static let summary = Pattern(#"^\*\* ([A-Z ]+?) (SUCCEEDED|FAILED|INTERRUPTED) \*\*"#)
+
+    // MARK: - Feeding
+
+    public func consume(_ rawLine: String) {
+        let line = rawLine.hasSuffix("\r") ? String(rawLine.dropLast()) : rawLine
+        guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        remember(line)
+
+        // "The following build commands failed:" block, terminated by "(N failures)".
+        if line.hasPrefix("The following build commands failed:") {
+            inFailedCommands = true
+            return
+        }
+        if inFailedCommands {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("(") && trimmed.hasSuffix(")") {
+                inFailedCommands = false
+            } else {
+                report.failedCommands.append(trimmed)
+            }
+            return
+        }
+
+        if let m = Self.summary.match(line) {
+            report.action = m[0]
+            report.result = m[1]
+            return
+        }
+
+        if let m = Self.xctestFailure.match(line) {
+            addFailure(TestFailure(
+                test: Self.normalizeTestName(m[2]!),
+                file: shorten(m[0]!),
+                line: Int(m[1]!),
+                message: m[3]!
+            ))
+            return
+        }
+
+        if let m = Self.xctestCase.match(line) {
+            testStatus[Self.normalizeTestName(m[0]!)] = m[1]!
+            return
+        }
+
+        if let m = Self.swiftTestingIssue.match(line) {
+            addFailure(TestFailure(
+                test: m[0]!,
+                file: shorten(m[1]!),
+                line: Int(m[2]!),
+                message: m[4]!
+            ))
+            return
+        }
+
+        if Self.swiftTestingRun.match(line) != nil { return }
+
+        if let m = Self.swiftTestingResult.match(line) {
+            testStatus["swift-testing:" + m[0]!] = m[1]!
+            return
+        }
+
+        if let m = Self.compilerDiagnostic.match(line) {
+            addDiagnostic(Diagnostic(
+                severity: m[3] == "warning" ? .warning : .error,
+                file: shorten(m[0]!),
+                line: Int(m[1]!),
+                column: Int(m[2]!),
+                message: m[4]!
+            ))
+            return
+        }
+
+        if let m = Self.globalDiagnostic.match(line) {
+            addDiagnostic(Diagnostic(
+                severity: m[0] == "warning" ? .warning : .error,
+                file: nil, line: nil, column: nil,
+                message: m[1]!
+            ))
+            return
+        }
+
+        if let m = Self.undefinedSymbol.match(line) {
+            addDiagnostic(Diagnostic(
+                severity: .error, file: nil, line: nil, column: nil,
+                message: "Undefined symbol: \(m[0]!)"
+            ))
+            return
+        }
+    }
+
+    public func finish(exitCode: Int32? = nil) -> Report {
+        var result = report
+        result.exitCode = exitCode
+        for status in testStatus.values {
+            switch status {
+            case "passed": result.testsPassed += 1
+            case "failed": result.testsFailed += 1
+            default: result.testsSkipped += 1
+            }
+        }
+        // Failure with nothing to show (e.g. a script phase died): give the agent raw context.
+        if result.hasFailures && result.errors.isEmpty && result.testFailures.isEmpty {
+            result.tail = tail
+        }
+        return result
+    }
+
+    // MARK: - Helpers
+
+    private func remember(_ line: String) {
+        tail.append(line)
+        if tail.count > options.tailSize { tail.removeFirst(tail.count - options.tailSize) }
+    }
+
+    private func addDiagnostic(_ d: Diagnostic) {
+        let key = "\(d.location ?? ""): \(d.message)"
+        switch d.severity {
+        case .error:
+            if seenErrors.insert(key).inserted { report.errors.append(d) }
+        case .warning:
+            if seenWarnings.insert(key).inserted { report.warnings.append(d) }
+        }
+    }
+
+    private func addFailure(_ f: TestFailure) {
+        let key = "\(f.test)|\(f.file ?? ""):\(f.line ?? 0)|\(f.message)"
+        if seenFailures.insert(key).inserted { report.testFailures.append(f) }
+    }
+
+    private func shorten(_ path: String) -> String {
+        guard let root = options.root, !root.isEmpty else { return path }
+        let prefix = root.hasSuffix("/") ? root : root + "/"
+        return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
+    }
+
+    /// "-[FooTests testBar]" -> "FooTests.testBar", "FooTests.testBar()" -> "FooTests.testBar"
+    static func normalizeTestName(_ name: String) -> String {
+        var n = name
+        if n.hasPrefix("-[") && n.hasSuffix("]") {
+            n = String(n.dropFirst(2).dropLast())
+            n = n.replacingOccurrences(of: " ", with: ".")
+        }
+        if n.hasSuffix("()") { n = String(n.dropLast(2)) }
+        return n
+    }
+}
+
+/// Thin NSRegularExpression wrapper returning capture groups (nil for groups that didn't participate).
+struct Pattern {
+    private let regex: NSRegularExpression
+
+    init(_ pattern: String) {
+        // Patterns are compile-time constants; a bad one is a programmer error.
+        regex = try! NSRegularExpression(pattern: pattern)
+    }
+
+    func match(_ s: String) -> [String?]? {
+        let range = NSRange(s.startIndex..., in: s)
+        guard let m = regex.firstMatch(in: s, range: range) else { return nil }
+        return (1..<m.numberOfRanges).map { i in
+            let r = m.range(at: i)
+            guard r.location != NSNotFound, let rr = Range(r, in: s) else { return nil }
+            return String(s[rr])
+        }
+    }
+}

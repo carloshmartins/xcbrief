@@ -1,0 +1,18 @@
+CompileSwift normal arm64 /Users/dev/App/Sources/Workout/WorkoutView.swift (in target 'Workout' from project 'App')
+/Users/dev/App/Sources/Workout/WorkoutView.swift:12:5: error: cannot find 'trainerr' in scope
+    trainerr.start()
+    ^~~~~~~~
+/Users/dev/App/Sources/Workout/WorkoutView.swift:12:5: error: cannot find 'trainerr' in scope
+Ld /Users/dev/Library/Developer/Xcode/DerivedData/App/Build/Products/Debug-iphonesimulator/App.app/App normal
+Undefined symbols for architecture arm64:
+  "_OBJC_CLASS_$_TCXSensor", referenced from:
+       in TrainerClient.o
+ld: symbol(s) not found for architecture arm64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+
+The following build commands failed:
+	SwiftCompile normal arm64 /Users/dev/App/Sources/Workout/WorkoutView.swift (in target 'Workout' from project 'App')
+	Ld /Users/dev/Library/Developer/Xcode/DerivedData/App/Build/Products/Debug-iphonesimulator/App.app/App normal (in target 'App' from project 'App')
+(2 failures)
+
+** BUILD FAILED **

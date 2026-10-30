@@ -1,0 +1,7 @@
+PhaseScriptExecution SwiftLint /Users/dev/Library/Developer/Xcode/DerivedData/App/Build/Intermediates.noindex/App.build/Script-1.sh
+    cd /Users/dev/App
+    /bin/sh -c /Users/dev/Library/Developer/Xcode/DerivedData/App/Build/Intermediates.noindex/App.build/Script-1.sh
+swiftlint: command not found
+Command PhaseScriptExecution failed with a nonzero exit code
+
+** BUILD FAILED **
