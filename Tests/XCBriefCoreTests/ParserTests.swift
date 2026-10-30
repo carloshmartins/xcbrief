@@ -92,6 +92,11 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(out.contains("::error file=/a/My%2CDir%3A1/F.swift,line=3,col=1::100%25 broken"))
     }
 
+    func testGitHubSummaryIncludesSkippedTests() throws {
+        let out = Renderer.render(try parse("test_failed"), options: .init(format: .github))
+        XCTAssertTrue(out.hasSuffix("tests: 3 passed, 2 failed, 1 skipped"))
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))

@@ -38,11 +38,7 @@ public enum Renderer {
         var out: [String] = []
 
         var header = [r.statusLine, "errors: \(r.errors.count)", "warnings: \(r.warnings.count)"]
-        if r.testsPassed + r.testsFailed + r.testsSkipped > 0 {
-            var t = "tests: \(r.testsPassed) passed, \(r.testsFailed) failed"
-            if r.testsSkipped > 0 { t += ", \(r.testsSkipped) skipped" }
-            header.append(t)
-        }
+        if let t = testsSummary(r) { header.append(t) }
         if let code = r.exitCode { header.append("exit: \(code)") }
         out.append(header.joined(separator: " | "))
 
@@ -84,6 +80,14 @@ public enum Renderer {
             out += r.tail.map { "  " + $0 }
         }
         return out.joined(separator: "\n")
+    }
+
+    /// "tests: 3 passed, 2 failed, 1 skipped", or nil when no tests ran.
+    private static func testsSummary(_ r: Report) -> String? {
+        guard r.testsPassed + r.testsFailed + r.testsSkipped > 0 else { return nil }
+        var t = "tests: \(r.testsPassed) passed, \(r.testsFailed) failed"
+        if r.testsSkipped > 0 { t += ", \(r.testsSkipped) skipped" }
+        return t
     }
 
     /// Groups diagnostics under their file (in order of first appearance), sorted by line.
@@ -176,8 +180,8 @@ public enum Renderer {
         out += r.errors.prefix(options.maxItems).map { command("error", file: $0.file, line: $0.line, col: $0.column, $0.message) }
         out += r.testFailures.prefix(options.maxItems).map { command("error", file: $0.file, line: $0.line, col: nil, title: $0.test, $0.message) }
         out += r.warnings.prefix(options.maxItems).map { command("warning", file: $0.file, line: $0.line, col: $0.column, $0.message) }
-        out.append(r.statusLine + " | errors: \(r.errors.count) | warnings: \(r.warnings.count)"
-                   + (r.testsFailed + r.testsPassed > 0 ? " | tests: \(r.testsPassed) passed, \(r.testsFailed) failed" : ""))
+        out.append(([r.statusLine, "errors: \(r.errors.count)", "warnings: \(r.warnings.count)"]
+                    + [testsSummary(r)].compactMap { $0 }).joined(separator: " | "))
         return out.joined(separator: "\n")
     }
 }
