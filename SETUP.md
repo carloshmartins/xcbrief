@@ -108,6 +108,7 @@ With fastlane `scan`/`gym`, set `buildlog_path` and feed the raw log (not the xc
 | `--github` | GitHub Actions annotations for CI |
 | `--tee <file>` | Also save the raw log |
 | `--root <path>` | Prefix stripped from paths (default: current directory) |
+| `--version` | Print the version |
 
 Exit codes: `0` = success; `1` = errors or test failures; otherwise the wrapped command's own exit code when it failed with nothing parseable; `64` = bad xcbrief arguments.
 

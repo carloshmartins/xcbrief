@@ -60,6 +60,7 @@ xcbrief --tee /tmp/xcodebuild.log -- xcodebuild test -scheme App
 | `--max <n>` | Max items per list (default 30) |
 | `--tee <file>` | Also write the full raw log |
 | `--root <path>` | Prefix stripped from paths (default: current directory) |
+| `--version` | Print the version |
 
 ## What it recognizes
 

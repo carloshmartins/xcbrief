@@ -13,12 +13,17 @@ OPTIONS:
   --max <n>        Max items per list (default: 30)
   --tee <file>     Also write the full raw log to <file>
   --root <path>    Path prefix to strip from file paths (default: current directory)
+  --version        Print the version
   -h, --help       Show this help
+
+Options taking a value also accept --opt=value.
 
 EXIT CODE:
   0 when nothing failed, 1 on errors/test failures, or the wrapped command's
   exit code when it failed without anything parseable.
 """
+
+let version = "0.1.0"
 
 func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data("xcbrief: \(message)\n\n\(usage)\n".utf8))
@@ -34,7 +39,12 @@ var command: [String] = []
 
 var args = Array(CommandLine.arguments.dropFirst())
 while !args.isEmpty {
-    let arg = args.removeFirst()
+    var arg = args.removeFirst()
+    // Accept --opt=value (value-taking options only) by splitting it into "--opt", "value".
+    if let eq = arg.firstIndex(of: "="), ["--max", "--tee", "--root"].contains(String(arg[..<eq])) {
+        args.insert(String(arg[arg.index(after: eq)...]), at: 0)
+        arg = String(arg[..<eq])
+    }
     switch arg {
     case "--json": renderOptions.format = .json
     case "--github": renderOptions.format = .github
@@ -51,6 +61,9 @@ while !args.isEmpty {
         guard let v = args.first else { fail("--root needs a path") }
         root = v
         args.removeFirst()
+    case "--version":
+        print("xcbrief \(version)")
+        exit(0)
     case "-h", "--help":
         print(usage)
         exit(0)
