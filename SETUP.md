@@ -18,7 +18,7 @@ swift --version            # Swift 5.9 or newer
 ## 1. Build and install
 
 ```bash
-cd xcbrief
+cd xcbrief            # the directory containing Package.swift
 make test            # all ParserTests pass
 make install         # release build → ~/.local/bin/xcbrief
 xcbrief --help       # prints usage

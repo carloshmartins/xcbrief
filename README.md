@@ -72,10 +72,26 @@ xcbrief --tee /tmp/xcodebuild.log -- xcodebuild test -scheme App
 - Undefined symbols from the linker
 - XCTest: failures (`file:line: error: -[Class test] : msg`), per-test results, including parallel `Test case '...' passed on 'Clone 1 ...'`
 - Swift Testing: `Test x() recorded an issue at file:line:col: msg` and pass/fail/skip lines
+- Test crashes (`<unknown>:0: error: ... Crash:`) and runner restarts, counted as failed tests
+- Multi-line global errors such as `Could not resolve package dependencies:` (first 3 detail lines kept)
+- Compiler `note:` lines, attached to the preceding error with `--notes`
 - `** BUILD|TEST|ARCHIVE SUCCEEDED|FAILED **`, and the "The following build commands failed:" block
 
 Duplicates (same diagnostic per arch/target/retry) are collapsed. When a build fails and none of
 the above explains why (e.g. a script phase crashed), the last 25 raw lines are included instead.
+
+## JSON output
+
+`--json` prints one object; empty fields are omitted. `schemaVersion` changes only when the shape
+changes in a way scripts could notice (currently `1`).
+
+```json
+{"schemaVersion":1,"status":"TEST FAILED","errors":[{"location":"A.swift:12:5","message":"..."}],
+ "warnings":[...],"testFailures":[{"test":"Mod.Class.method","location":"T.swift:27","message":"..."}],
+ "tests":{"passed":3,"failed":2,"skipped":1},"failedCommands":[...],"tail":[...],"exitCode":65}
+```
+
+`warnings` only appears with `--warnings`; `notes` (per error) only with `--notes`.
 
 ## Why this output format
 
