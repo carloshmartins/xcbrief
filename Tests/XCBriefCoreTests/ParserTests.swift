@@ -65,27 +65,48 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(r.errors.isEmpty)
     }
 
-    func testPackageResolutionErrorKeepsDetailLines() throws {
-        let r = try parse("package_resolution_failed")
+    // MARK: - Real xcodebuild 26 output (sanitized paths), captured from small sample packages
+
+    func testRealPackageResolutionErrorKeepsDetailLines() throws {
+        let r = try parse("real_package_resolution")
         XCTAssertEqual(r.errors.count, 1)
         let message = r.errors[0].message
         XCTAssertTrue(message.hasPrefix("Could not resolve package dependencies: Failed to clone repository"))
-        XCTAssertTrue(message.contains("Could not resolve host: github.com"))
-        XCTAssertFalse(message.contains("other things"), "detail capped at \(3) lines")
+        XCTAssertTrue(message.contains("terminal prompts disabled"))
         XCTAssertTrue(r.tail.isEmpty)
     }
 
-    func testCrashAndSigningErrors() throws {
-        let r = try parse("test_crashed")
-        // The crash error and the runner-restart line describe one failure: reported once.
-        XCTAssertEqual(r.testFailures.count, 1)
-        let crashed = r.testFailures
-        XCTAssertNil(crashed[0].location, "<unknown>:0 is not a real location")
-        XCTAssertTrue(crashed[0].message.hasPrefix("Crash: xctest"))
-        XCTAssertEqual(r.errors.count, 1)
-        XCTAssertTrue(r.errors[0].message.hasPrefix("Signing for \"App\" requires a development team"))
+    func testRealCompileErrorInTestTarget() throws {
+        let r = try parse("real_compile_error")
+        XCTAssertEqual(r.statusLine, "TEST FAILED")
+        XCTAssertEqual(r.errors.count, 2)
+        XCTAssertEqual(r.errors[0].location, "Tests/LibTests/LibTests.swift:6:38")
+        XCTAssertTrue(r.errors[0].message.hasPrefix("use of 'add' refers to instance method"))
+        XCTAssertTrue(r.testFailures.isEmpty, "'Testing failed:' block lines are not test failures")
+        XCTAssertFalse(r.failedCommands.isEmpty)
+        XCTAssertTrue(r.tail.isEmpty)
+    }
+
+    func testRealXCTestAndSwiftTestingRun() throws {
+        let r = try parse("real_xctest_and_swift_testing")
+        XCTAssertEqual(r.statusLine, "TEST FAILED")
         XCTAssertEqual(r.testsPassed, 2)
-        XCTAssertEqual(r.testsFailed, 1, "crashed test counts as failed")
+        XCTAssertEqual(r.testsFailed, 2)
+        XCTAssertEqual(r.testsSkipped, 1)
+        XCTAssertEqual(r.testFailures.map(\.test), ["LibTests.LibXCTests.testFail", "fails()"])
+        XCTAssertEqual(r.testFailures[0].location, "Tests/LibTests/LibTests.swift:7")
+        XCTAssertEqual(r.testFailures[1].location, "LibTests.swift:13")
+        XCTAssertEqual(r.warnings.count, 1, "AppIntents metadata 'warning:' line is not a compiler warning")
+    }
+
+    func testRealCrashIsReportedAsFailedTest() throws {
+        let r = try parse("real_crash")
+        XCTAssertEqual(r.testsPassed, 2)
+        XCTAssertEqual(r.testsFailed, 1)
+        XCTAssertEqual(r.testFailures.count, 1)
+        XCTAssertEqual(r.testFailures[0].test, "LibTests.CrashTests.testCrash")
+        XCTAssertTrue(r.testFailures[0].message.hasSuffix("Index out of range"))
+        XCTAssertTrue(r.tail.isEmpty, "an explained failure needs no raw tail")
     }
 
     func testUnexplainedFailureFallsBackToTail() throws {

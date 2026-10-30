@@ -29,6 +29,10 @@ public final class XcodebuildParser {
     private var lastErrorIndex: Int?
     private static let maxNotesPerError = 3
 
+    // Test currently running (started, no result yet) and its first "Fatal error:" line, to explain crashes.
+    private var currentTest: String?
+    private var currentFatal: String?
+
     private var inFailedCommands = false
     // A global error ending in ":" (e.g. package resolution) is followed by indented detail lines.
     private var continuationIndex: Int?
@@ -59,8 +63,15 @@ public final class XcodebuildParser {
     // ✔ Test run with 12 tests in 3 suites passed after 0.02 seconds.  (summary, ignored)
     private static let swiftTestingRun = Pattern(#"(?:^|\s)Test run with \d+ tests?"#)
 
-    // Restarting after unexpected exit, crash, or test timeout in PowerZoneTests/testZone5(); summary will ...
-    private static let crashRestart = Pattern(#"^Restarting after unexpected exit, crash, or test timeout in (.+?);"#)
+    // Test Case '-[FooTests testBar]' started.
+    private static let xctestStarted = Pattern(#"^Test [Cc]ase '(.+?)' started"#)
+
+    // Swift/ContiguousArrayBuffer.swift:691: Fatal error: Index out of range
+    private static let fatalError = Pattern(#"Fatal error: (.+)$"#)
+
+    // Restarting after unexpected exit, crash, or test timeout; summary will include totals ...
+    // (some Xcode versions add " in Class/method()" before the semicolon)
+    private static let crashRestart = Pattern(#"^Restarting after unexpected exit, crash, or test timeout(?: in (.+?))?;"#)
 
     // /path/File.swift:12:5: error: cannot find 'x' in scope
     private static let compilerDiagnostic = Pattern(#"^(.+?):(\d+):(\d+): (error|warning|fatal error): (.*)$"#)
@@ -130,16 +141,32 @@ public final class XcodebuildParser {
         }
 
         if let m = Self.crashRestart.match(line) {
-            let test = Self.normalizeTestName(m[0]!.replacingOccurrences(of: "/", with: "."))
-            // Usually preceded by the crash error for the same test (which has the module name).
+            let test = m[0].map { Self.normalizeTestName($0.replacingOccurrences(of: "/", with: ".")) } ?? currentTest
+            defer { currentTest = nil; currentFatal = nil }
+            guard let test else { return }
+            testStatus[test] = "failed"
+            // May follow a crash error for the same test (which has the module name).
             if report.testFailures.contains(where: { $0.test == test || $0.test.hasSuffix("." + test) }) { return }
+            let reason = currentFatal.map { ": \($0)" } ?? ""
             addFailure(TestFailure(test: test, file: nil, line: nil,
-                                   message: "test runner crashed or timed out and was restarted"))
+                                   message: "test runner crashed or timed out and was restarted" + reason))
+            return
+        }
+
+        if let m = Self.xctestStarted.match(line) {
+            currentTest = Self.normalizeTestName(m[0]!)
+            currentFatal = nil
+            return
+        }
+
+        if currentTest != nil, currentFatal == nil, let m = Self.fatalError.match(line) {
+            currentFatal = m[0]
             return
         }
 
         if let m = Self.xctestCase.match(line) {
             testStatus[Self.normalizeTestName(m[0]!)] = m[1]!
+            currentTest = nil
             return
         }
 

@@ -1,0 +1,19 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -scheme Lib -destination platform=macOS
+
+Resolve Package Graph
+
+Fetching from https://github.com/acme/this-repo-does-not-exist-xyz
+skipping cache due to an error: Failed to clone repository https://github.com/acme/this-repo-does-not-exist-xyz:
+    Cloning into bare repository '/Users/dev/Library/Caches/org.swift.swiftpm/repositories/this-repo-does-not-exist-xyz-a2b462cf'...
+    fatal: could not read Username for 'https://github.com': terminal prompts disabled
+
+Resolved source packages:
+  pkg: (null)
+
+2026-10-30 12:46:02.956 xcodebuild[91831:7846816] Writing error result bundle to /var/folders/fb/m6_k4h0n187dskrzhv8gj_2c0000gn/T/ResultBundle_2026-30-10_12-46-0002.xcresult
+xcodebuild: error: Could not resolve package dependencies:
+  Failed to clone repository https://github.com/acme/this-repo-does-not-exist-xyz:
+    Cloning into bare repository '/Users/dev/Library/Developer/Xcode/DerivedData/pkg-chiwbtbbicvfgyexhqceovuqthhj/SourcePackages/repositories/this-repo-does-not-exist-xyz-a2b462cf'...
+    fatal: could not read Username for 'https://github.com': terminal prompts disabled
+
