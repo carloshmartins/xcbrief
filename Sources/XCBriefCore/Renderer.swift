@@ -15,11 +15,14 @@ public struct RenderOptions {
     public var includeWarnings = false
     /// Cap per list so a broken module with 500 errors doesn't flood the context window.
     public var maxItems = 30
+    /// Text format only: header, errors and test failures, without the warnings summary or failed commands.
+    public var quiet = false
 
-    public init(format: OutputFormat = .text, includeWarnings: Bool = false, maxItems: Int = 30) {
+    public init(format: OutputFormat = .text, includeWarnings: Bool = false, maxItems: Int = 30, quiet: Bool = false) {
         self.format = format
         self.includeWarnings = includeWarnings
         self.maxItems = maxItems
+        self.quiet = quiet
     }
 }
 
@@ -67,11 +70,11 @@ public enum Renderer {
         }
 
         // Warnings collapsed by message: enough to triage, a fraction of the tokens.
-        if !options.includeWarnings && !r.warnings.isEmpty {
+        if !options.quiet && !options.includeWarnings && !r.warnings.isEmpty {
             out += collapsedWarnings(r.warnings)
         }
 
-        if !r.failedCommands.isEmpty {
+        if !options.quiet && !r.failedCommands.isEmpty {
             out.append("failed commands:")
             out += r.failedCommands.map { "  " + $0 }
         }

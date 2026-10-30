@@ -157,6 +157,17 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(reversed.finish().errors.first?.file, "H.swift")
     }
 
+    func testQuietOmitsWarningsAndFailedCommands() throws {
+        let tests = Renderer.render(try parse("test_failed"), options: .init(quiet: true))
+        XCTAssertTrue(tests.contains("test failures:"))
+        XCTAssertFalse(tests.contains("warnings by message"))
+        XCTAssertTrue(tests.hasPrefix("TEST FAILED | errors: 0 | warnings: 3"), "counts stay in the header")
+
+        let build = Renderer.render(try parse("build_failed"), options: .init(quiet: true))
+        XCTAssertFalse(build.contains("failed commands:"))
+        XCTAssertTrue(build.contains("cannot find 'trainerr' in scope"))
+    }
+
     func testOnlyTestingArgument() {
         XCTAssertEqual(Renderer.onlyTestingArgument("Mod.FooTests.testBar"), "-only-testing:Mod/FooTests/testBar")
         XCTAssertNil(Renderer.onlyTestingArgument("resistance()"))

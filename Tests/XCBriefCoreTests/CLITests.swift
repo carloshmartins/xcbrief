@@ -21,6 +21,8 @@ final class CLITests: XCTestCase {
     }
 
     func testFlagsAndValues() throws {
+        XCTAssertTrue(try options(["-q"]).render.quiet)
+        XCTAssertTrue(try options(["--quiet"]).render.quiet)
         let o = try options(["--github", "--warnings", "--max", "5", "--tee", "/tmp/a.log", "--root", "/r"])
         XCTAssertEqual(o.render.format, .github)
         XCTAssertTrue(o.render.includeWarnings)
