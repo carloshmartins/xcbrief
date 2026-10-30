@@ -65,6 +65,16 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(r.errors.isEmpty)
     }
 
+    func testPackageResolutionErrorKeepsDetailLines() throws {
+        let r = try parse("package_resolution_failed")
+        XCTAssertEqual(r.errors.count, 1)
+        let message = r.errors[0].message
+        XCTAssertTrue(message.hasPrefix("Could not resolve package dependencies: Failed to clone repository"))
+        XCTAssertTrue(message.contains("Could not resolve host: github.com"))
+        XCTAssertFalse(message.contains("other things"), "detail capped at \(3) lines")
+        XCTAssertTrue(r.tail.isEmpty)
+    }
+
     func testUnexplainedFailureFallsBackToTail() throws {
         let r = try parse("script_failed")
         XCTAssertTrue(r.errors.isEmpty)

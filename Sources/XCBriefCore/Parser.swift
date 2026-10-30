@@ -26,6 +26,10 @@ public final class XcodebuildParser {
     private var testStatus: [String: String] = [:]
 
     private var inFailedCommands = false
+    // A global error ending in ":" (e.g. package resolution) is followed by indented detail lines.
+    private var continuationIndex: Int?
+    private var continuationLines = 0
+    private static let maxContinuationLines = 3
     private var tail: [String] = []
 
     public init(options: Options = Options()) {
@@ -85,6 +89,15 @@ public final class XcodebuildParser {
             return
         }
 
+        if let index = continuationIndex {
+            if line.first == " " || line.first == "\t", continuationLines < Self.maxContinuationLines {
+                report.errors[index].message += " " + line.trimmingCharacters(in: .whitespaces)
+                continuationLines += 1
+                return
+            }
+            continuationIndex = nil
+        }
+
         if let m = Self.summary.match(line) {
             report.action = m[0]
             report.result = m[1]
@@ -135,11 +148,17 @@ public final class XcodebuildParser {
         }
 
         if let m = Self.globalDiagnostic.match(line) {
+            let isError = m[0] != "warning"
+            let before = report.errors.count
             addDiagnostic(Diagnostic(
-                severity: m[0] == "warning" ? .warning : .error,
+                severity: isError ? .error : .warning,
                 file: nil, line: nil, column: nil,
                 message: m[1]!
             ))
+            if isError, report.errors.count > before, m[1]!.hasSuffix(":") {
+                continuationIndex = report.errors.count - 1
+                continuationLines = 0
+            }
             return
         }
 
